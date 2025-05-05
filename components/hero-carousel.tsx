@@ -106,7 +106,7 @@ export default function HeroCarousel() {
   return (
     <div className="relative h-[70vh] w-full overflow-hidden" onMouseEnter={pauseAutoPlay}>
       {/* Overlay gradient */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-b from-transparent via-transparent to-background"></div>
+      
 
       {/* Carrousel d'images */}
       <div className="relative h-full w-full">

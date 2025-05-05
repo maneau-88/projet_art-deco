@@ -30,12 +30,13 @@ export default function Header() {
           </Link>
 
           {isDesktop ? (
-            <nav className="flex gap-6">
+            <nav className="flex gap-6 ml-20">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className="text-sm font-medium transition-colors hover:text-primary"
+            
                 >
                   {item.name}
                 </Link>
