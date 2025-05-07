@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,9 +13,136 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { Package, Heart, Settings, CreditCard, User, Edit, Camera, LogOut } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { signOut } from "@/app/actions/auth"
 
 export default function AccountClientPage() {
   const [activeTab, setActiveTab] = useState("profile")
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [favorites, setFavorites] = useState<any[]>([])
+  const [orders, setOrders] = useState<any[]>([])
+  const router = useRouter()
+  const { toast } = useToast()
+  const supabase = createClientComponentClient()
+
+  // Charger les données de l'utilisateur
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        setLoading(true)
+
+        // Récupérer la session
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          router.push("/login")
+          return
+        }
+
+        setUser(session.user)
+
+        // Récupérer le profil
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+
+        if (profileError) {
+          console.error("Erreur lors du chargement du profil:", profileError)
+          toast({
+            title: "Erreur",
+            description: "Impossible de charger votre profil",
+            variant: "destructive",
+          })
+        } else if (profileData) {
+          setProfile(profileData)
+        }
+
+        // Simuler le chargement des favoris (à remplacer par une vraie requête)
+        setFavorites([
+          {
+            id: 1,
+            title: "Coucher de soleil sur l'Ogooué",
+            artist: "Marie Nguema",
+            price: 180,
+            image: "/placeholder.svg?height=300&width=400",
+          },
+          {
+            id: 2,
+            title: "Masque Fang",
+            artist: "Pierre Moussavou",
+            price: 320,
+            image: "/placeholder.svg?height=300&width=400",
+          },
+        ])
+
+        // Simuler le chargement des commandes (à remplacer par une vraie requête)
+        setOrders([
+          {
+            id: "ART-2023-001",
+            date: "15 mars 2023",
+            status: "Livré",
+            items: [
+              {
+                title: "Paysage du Gabon",
+                description: "Impression sur toile, 60x40cm",
+                price: 120,
+                image: "/placeholder.svg?height=64&width=64",
+              },
+            ],
+          },
+          {
+            id: "ART-2023-002",
+            date: "2 avril 2023",
+            status: "En cours",
+            items: [
+              {
+                title: "Sculpture traditionnelle",
+                description: "Bois sculpté, 30cm",
+                price: 250,
+                image: "/placeholder.svg?height=64&width=64",
+              },
+            ],
+          },
+        ])
+      } catch (error) {
+        console.error("Erreur:", error)
+        toast({
+          title: "Erreur",
+          description: "Une erreur est survenue lors du chargement de vos données",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserData()
+  }, [router, supabase, toast])
+
+  // Gérer la déconnexion
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push("/")
+      toast({
+        title: "Déconnexion réussie",
+        description: "Vous avez été déconnecté avec succès",
+      })
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la déconnexion",
+        variant: "destructive",
+      })
+    }
+  }
 
   // Animation variants
   const containerVariants = {
@@ -35,6 +164,27 @@ export default function AccountClientPage() {
         duration: 0.5,
       },
     },
+  }
+
+  if (loading) {
+    return (
+      <div className="container py-10">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-pulse text-lg">Chargement de votre profil...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user || !profile) {
+    return null
+  }
+
+  // Extraire les initiales pour l'avatar
+  const getInitials = () => {
+    const firstName = profile.first_name || ""
+    const lastName = profile.last_name || ""
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
   }
 
   return (
@@ -61,16 +211,24 @@ export default function AccountClientPage() {
               <div className="flex flex-col items-center">
                 <div className="relative mb-4">
                   <Avatar className="h-24 w-24">
-                    <AvatarImage src="/placeholder.svg?height=96&width=96" alt="Photo de profil" />
-                    <AvatarFallback>AD</AvatarFallback>
+                    <AvatarImage
+                      src={profile.avatar_url || "/placeholder.svg?height=96&width=96"}
+                      alt="Photo de profil"
+                    />
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                   <Button size="icon" variant="secondary" className="absolute bottom-0 right-0 h-8 w-8 rounded-full">
                     <Camera className="h-4 w-4" />
                     <span className="sr-only">Changer la photo</span>
                   </Button>
                 </div>
-                <CardTitle>Jean Dupont</CardTitle>
-                <CardDescription>Membre depuis Janvier 2023</CardDescription>
+                <CardTitle>
+                  {profile.first_name} {profile.last_name}
+                </CardTitle>
+                <CardDescription>
+                  Membre depuis{" "}
+                  {new Date(user.created_at).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -106,7 +264,7 @@ export default function AccountClientPage() {
               </Tabs>
             </CardContent>
             <CardFooter>
-              <Button variant="outline" className="w-full" size="sm">
+              <Button variant="outline" className="w-full" size="sm" onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
                 Déconnexion
               </Button>
@@ -132,22 +290,22 @@ export default function AccountClientPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Prénom</Label>
-                      <Input id="firstName" value="Jean" readOnly />
+                      <Input id="firstName" value={profile.first_name || ""} readOnly />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Nom</Label>
-                      <Input id="lastName" value="Dupont" readOnly />
+                      <Input id="lastName" value={profile.last_name || ""} readOnly />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" value="jean.dupont@example.com" readOnly />
+                    <Input id="email" type="email" value={user.email || ""} readOnly />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="phone">Téléphone</Label>
-                    <Input id="phone" type="tel" value="+33 6 12 34 56 78" readOnly />
+                    <Input id="phone" type="tel" value={profile.phone || ""} readOnly />
                   </div>
 
                   <Separator />
@@ -157,19 +315,19 @@ export default function AccountClientPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="address">Adresse</Label>
-                        <Input id="address" value="123 Rue de Paris" readOnly />
+                        <Input id="address" value={profile.address || ""} readOnly />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="city">Ville</Label>
-                        <Input id="city" value="Paris" readOnly />
+                        <Input id="city" value={profile.city || ""} readOnly />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="postalCode">Code postal</Label>
-                        <Input id="postalCode" value="75001" readOnly />
+                        <Input id="postalCode" value={profile.postal_code || ""} readOnly />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="country">Pays</Label>
-                        <Input id="country" value="France" readOnly />
+                        <Input id="country" value={profile.country || ""} readOnly />
                       </div>
                     </div>
                   </div>
@@ -186,67 +344,53 @@ export default function AccountClientPage() {
               </CardHeader>
               <CardContent>
                 <motion.div variants={containerVariants} className="space-y-4">
-                  <motion.div variants={itemVariants}>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-base">Commande #ART-2023-001</CardTitle>
-                          <Badge>Livré</Badge>
-                        </div>
-                        <CardDescription>Commandé le 15 mars 2023</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-16 w-16 rounded-md bg-muted relative overflow-hidden">
-                              <img src="/placeholder.svg?height=64&width=64" alt="Tableau" className="object-cover" />
+                  {orders.length > 0 ? (
+                    orders.map((order) => (
+                      <motion.div key={order.id} variants={itemVariants}>
+                        <Card>
+                          <CardHeader className="pb-2">
+                            <div className="flex justify-between items-center">
+                              <CardTitle className="text-base">Commande #{order.id}</CardTitle>
+                              <Badge variant={order.status === "Livré" ? "default" : "outline"}>{order.status}</Badge>
                             </div>
-                            <div>
-                              <p className="font-medium">Paysage du Gabon</p>
-                              <p className="text-sm text-muted-foreground">Impression sur toile, 60x40cm</p>
-                            </div>
-                          </div>
-                          <p className="font-medium">120 €</p>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full">
-                          Voir les détails
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-base">Commande #ART-2023-002</CardTitle>
-                          <Badge variant="outline">En cours</Badge>
-                        </div>
-                        <CardDescription>Commandé le 2 avril 2023</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-16 w-16 rounded-md bg-muted relative overflow-hidden">
-                              <img src="/placeholder.svg?height=64&width=64" alt="Sculpture" className="object-cover" />
-                            </div>
-                            <div>
-                              <p className="font-medium">Sculpture traditionnelle</p>
-                              <p className="text-sm text-muted-foreground">Bois sculpté, 30cm</p>
-                            </div>
-                          </div>
-                          <p className="font-medium">250 €</p>
-                        </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full">
-                          Suivre la livraison
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
+                            <CardDescription>Commandé le {order.date}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pb-2">
+                            {order.items.map((item: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="h-16 w-16 rounded-md bg-muted relative overflow-hidden">
+                                    <img
+                                      src={item.image || "/placeholder.svg"}
+                                      alt={item.title}
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">{item.title}</p>
+                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                  </div>
+                                </div>
+                                <p className="font-medium">{item.price} €</p>
+                              </div>
+                            ))}
+                          </CardContent>
+                          <CardFooter>
+                            <Button variant="outline" size="sm" className="w-full">
+                              {order.status === "Livré" ? "Voir les détails" : "Suivre la livraison"}
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground">Vous n'avez pas encore passé de commande</p>
+                      <Button className="mt-4" onClick={() => router.push("/gallery")}>
+                        Découvrir notre galerie
+                      </Button>
+                    </div>
+                  )}
                 </motion.div>
               </CardContent>
             </Card>
@@ -260,65 +404,62 @@ export default function AccountClientPage() {
               </CardHeader>
               <CardContent>
                 <motion.div variants={containerVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <motion.div variants={itemVariants}>
-                    <Card>
-                      <div className="aspect-[4/3] w-full relative overflow-hidden rounded-t-lg">
-                        <img
-                          src="/placeholder.svg?height=300&width=400"
-                          alt="Œuvre d'art"
-                          className="object-cover w-full h-full"
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80"
-                        >
-                          <Heart className="h-4 w-4 fill-primary-500 text-primary-500" />
-                          <span className="sr-only">Retirer des favoris</span>
-                        </Button>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium">Coucher de soleil sur l'Ogooué</h3>
-                        <p className="text-sm text-muted-foreground">Par Marie Nguema</p>
-                        <p className="font-medium mt-2">180 €</p>
-                      </CardContent>
-                      <CardFooter className="p-4 pt-0">
-                        <Button size="sm" className="w-full">
-                          Ajouter au panier
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <Card>
-                      <div className="aspect-[4/3] w-full relative overflow-hidden rounded-t-lg">
-                        <img
-                          src="/placeholder.svg?height=300&width=400"
-                          alt="Œuvre d'art"
-                          className="object-cover w-full h-full"
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80"
-                        >
-                          <Heart className="h-4 w-4 fill-primary-500 text-primary-500" />
-                          <span className="sr-only">Retirer des favoris</span>
-                        </Button>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-medium">Masque Fang</h3>
-                        <p className="text-sm text-muted-foreground">Par Pierre Moussavou</p>
-                        <p className="font-medium mt-2">320 €</p>
-                      </CardContent>
-                      <CardFooter className="p-4 pt-0">
-                        <Button size="sm" className="w-full">
-                          Ajouter au panier
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
+                  {favorites.length > 0 ? (
+                    favorites.map((favorite) => (
+                      <motion.div key={favorite.id} variants={itemVariants}>
+                        <Card>
+                          <div className="aspect-[4/3] w-full relative overflow-hidden rounded-t-lg">
+                            <img
+                              src={favorite.image || "/placeholder.svg"}
+                              alt={favorite.title}
+                              className="object-cover w-full h-full"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80"
+                              onClick={() => {
+                                setFavorites(favorites.filter((fav) => fav.id !== favorite.id))
+                                toast({
+                                  title: "Retiré des favoris",
+                                  description: "L'œuvre a été retirée de vos favoris",
+                                })
+                              }}
+                            >
+                              <Heart className="h-4 w-4 fill-primary-500 text-primary-500" />
+                              <span className="sr-only">Retirer des favoris</span>
+                            </Button>
+                          </div>
+                          <CardContent className="p-4">
+                            <h3 className="font-medium">{favorite.title}</h3>
+                            <p className="text-sm text-muted-foreground">Par {favorite.artist}</p>
+                            <p className="font-medium mt-2">{favorite.price} €</p>
+                          </CardContent>
+                          <CardFooter className="p-4 pt-0">
+                            <Button
+                              size="sm"
+                              className="w-full"
+                              onClick={() => {
+                                toast({
+                                  title: "Ajouté au panier",
+                                  description: `${favorite.title} a été ajouté à votre panier`,
+                                })
+                              }}
+                            >
+                              Ajouter au panier
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      </motion.div>
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center py-8">
+                      <p className="text-muted-foreground">Vous n'avez pas encore ajouté d'œuvres à vos favoris</p>
+                      <Button className="mt-4" onClick={() => router.push("/gallery")}>
+                        Découvrir notre galerie
+                      </Button>
+                    </div>
+                  )}
                 </motion.div>
               </CardContent>
             </Card>

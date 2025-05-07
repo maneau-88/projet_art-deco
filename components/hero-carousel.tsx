@@ -11,14 +11,14 @@ import { cn } from "@/lib/utils"
 const carouselItems = [
   {
     id: 1,
-    image: "MASQUE DU GABON.jpg",
+    image: "/1er_image_carousel.jpg",
     title: "Art traditionnel gabonais",
     description: "Découvrez les masques et sculptures qui ont fait la renommée de l'art gabonais",
     link: "/gallery?category=sculpture",
   },
   {
     id: 2,
-    image: "/PAYSAGE2.jpg",
+    image: "/beautiful-shot-pond-middle-forest (1).jpg",
     title: "Paysages du Gabon",
     description: "Explorez la beauté naturelle du Gabon à travers les œuvres de nos artistes",
     link: "/gallery?category=paysage",
@@ -84,11 +84,11 @@ export default function HeroCarousel() {
       if (isAutoPlaying) {
         const interval = setInterval(() => {
           goToNext()
-        }, 5000) // Change d'image toutes les 5 secondes
+        }, 9000) // Change d'image toutes les 9 secondes
 
         return () => clearInterval(interval)
       }
-    }, 3000) // Commence après 3 secondes
+    }, 7000) // Commence après 7 secondes
 
     return () => clearTimeout(startAutoPlay)
   }, [goToNext, isAutoPlaying])

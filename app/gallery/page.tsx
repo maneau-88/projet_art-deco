@@ -1,4 +1,6 @@
-import type { Metadata } from "next"
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -9,97 +11,93 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Search, Filter, Heart, ShoppingCart } from "lucide-react"
-
-export const metadata: Metadata = {
-  title: "Galerie | Art & Deco",
-  description: "Explorez notre collection d'œuvres d'art gabonais pour votre décoration intérieure",
-}
-
-// Sample data for artworks with Gabonese art
-const artworks = [
-  {
-    id: 1,
-    title: "Masque Fang Ngil",
-    artist: "Jean-Paul Ndong",
-    price: 450,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Sculpture",
-    style: "Traditionnel",
-    isNew: true,
-  },
-  {
-    id: 2,
-    title: "Forêt Équatoriale",
-    artist: "Marie Ogoula",
-    price: 380,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Paysage",
-    style: "Contemporain",
-    isNew: false,
-  },
-  {
-    id: 3,
-    title: "Cérémonie Bwiti",
-    artist: "Pierre Akendengue",
-    price: 520,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Peinture",
-    style: "Traditionnel",
-    isNew: true,
-  },
-  {
-    id: 4,
-    title: "Femme Punu",
-    artist: "Sophie Ntsame",
-    price: 290,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Portrait",
-    style: "Contemporain",
-    isNew: false,
-  },
-  {
-    id: 5,
-    title: "Masque Blanc Punu",
-    artist: "Claire Ayouma",
-    price: 410,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Sculpture",
-    style: "Traditionnel",
-    isNew: false,
-  },
-  {
-    id: 6,
-    title: "Danseur Mukudji",
-    artist: "Jean-Paul Ndong",
-    price: 350,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Portrait",
-    style: "Expressionniste",
-    isNew: true,
-  },
-  {
-    id: 7,
-    title: "Plage de Pointe Denis",
-    artist: "Marie Ogoula",
-    price: 480,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Paysage",
-    style: "Impressionniste",
-    isNew: false,
-  },
-  {
-    id: 8,
-    title: "Symboles Kota",
-    artist: "Thomas Moussavou",
-    price: 320,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Abstrait",
-    style: "Géométrique",
-    isNew: true,
-  },
-]
+import { artworks, filterArtworks, artists } from "@/lib/data"
+import { useToast } from "@/hooks/use-toast"
 
 export default function GalleryPage() {
+  // État pour les filtres
+  const [category, setCategory] = useState("all")
+  const [style, setStyle] = useState("all")
+  const [artist, setArtist] = useState("all")
+  const [ethnie, setEthnie] = useState("all")
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState("newest")
+  const [viewMode, setViewMode] = useState("grid")
+  const [filteredArtworks, setFilteredArtworks] = useState(artworks)
+  const [favorites, setFavorites] = useState<number[]>([])
+  const { toast } = useToast()
+
+  // Appliquer les filtres
+  useEffect(() => {
+    let filtered = filterArtworks({
+      category: category,
+      style: style,
+      artist: artist,
+      ethnie: ethnie,
+      priceRange: priceRange,
+    })
+
+    // Appliquer la recherche
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (artwork) =>
+          artwork.title.toLowerCase().includes(query) ||
+          artwork.artist.toLowerCase().includes(query) ||
+          artwork.category.toLowerCase().includes(query) ||
+          artwork.style.toLowerCase().includes(query),
+      )
+    }
+
+    // Appliquer le tri
+    switch (sortBy) {
+      case "newest":
+        filtered.sort((a, b) => (b.year || 0) - (a.year || 0))
+        break
+      case "price-asc":
+        filtered.sort((a, b) => a.price - b.price)
+        break
+      case "price-desc":
+        filtered.sort((a, b) => b.price - a.price)
+        break
+      case "popularity":
+        // Ici on pourrait trier par popularité si on avait cette donnée
+        filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0))
+        break
+    }
+
+    setFilteredArtworks(filtered)
+  }, [category, style, artist, ethnie, priceRange, searchQuery, sortBy])
+
+  // Gérer les favoris
+  const toggleFavorite = (id: number) => {
+    if (favorites.includes(id)) {
+      setFavorites(favorites.filter((favId) => favId !== id))
+      toast({
+        title: "Retiré des favoris",
+        description: "L'œuvre a été retirée de vos favoris",
+      })
+    } else {
+      setFavorites([...favorites, id])
+      toast({
+        title: "Ajouté aux favoris",
+        description: "L'œuvre a été ajoutée à vos favoris",
+      })
+    }
+  }
+
+  // Ajouter au panier
+  const addToCart = (artwork: any) => {
+    toast({
+      title: "Ajouté au panier",
+      description: `${artwork.title} a été ajouté à votre panier`,
+    })
+  }
+
+  // Extraire les ethnies uniques
+  const uniqueEthnies = Array.from(new Set(artworks.map((artwork) => artwork.ethnie))).filter(Boolean) as string[]
+
   return (
     <div className="container py-8 md:py-12">
       <div className="mb-8">
@@ -117,13 +115,18 @@ export default function GalleryPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-        {/* Filters */}
+        {/* Filtres */}
         <div className="space-y-6">
           <div className="rounded-lg border p-4">
             <h2 className="mb-4 font-medium">Recherche</h2>
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Rechercher..." className="pl-8" />
+              <Input
+                placeholder="Rechercher..."
+                className="pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </div>
 
@@ -132,7 +135,7 @@ export default function GalleryPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-2 block text-sm">Catégorie</label>
-                <Select>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger>
                     <SelectValue placeholder="Toutes les catégories" />
                   </SelectTrigger>
@@ -149,7 +152,7 @@ export default function GalleryPage() {
 
               <div>
                 <label className="mb-2 block text-sm">Style</label>
-                <Select>
+                <Select value={style} onValueChange={setStyle}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tous les styles" />
                   </SelectTrigger>
@@ -166,53 +169,69 @@ export default function GalleryPage() {
 
               <div>
                 <label className="mb-2 block text-sm">Artiste</label>
-                <Select>
+                <Select value={artist} onValueChange={setArtist}>
                   <SelectTrigger>
                     <SelectValue placeholder="Tous les artistes" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Tous les artistes</SelectItem>
-                    <SelectItem value="jean-paul-ndong">Jean-Paul Ndong</SelectItem>
-                    <SelectItem value="marie-ogoula">Marie Ogoula</SelectItem>
-                    <SelectItem value="pierre-akendengue">Pierre Akendengue</SelectItem>
-                    <SelectItem value="sophie-ntsame">Sophie Ntsame</SelectItem>
-                    <SelectItem value="claire-ayouma">Claire Ayouma</SelectItem>
-                    <SelectItem value="thomas-moussavou">Thomas Moussavou</SelectItem>
+                    {artists.map((artist) => (
+                      <SelectItem key={artist.id} value={artist.name}>
+                        {artist.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
                 <label className="mb-2 block text-sm">Ethnie</label>
-                <Select>
+                <Select value={ethnie} onValueChange={setEthnie}>
                   <SelectTrigger>
                     <SelectValue placeholder="Toutes les ethnies" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Toutes les ethnies</SelectItem>
-                    <SelectItem value="fang">Fang</SelectItem>
-                    <SelectItem value="punu">Punu</SelectItem>
-                    <SelectItem value="myene">Myéné</SelectItem>
-                    <SelectItem value="kota">Kota</SelectItem>
-                    <SelectItem value="tsogo">Tsogo</SelectItem>
+                    {uniqueEthnies.map((ethnie) => (
+                      <SelectItem key={ethnie} value={ethnie}>
+                        {ethnie}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <label className="mb-2 block text-sm">Prix (FCFA)</label>
+                <label className="mb-2 block text-sm">Prix (€)</label>
                 <div className="px-2">
-                  <Slider defaultValue={[0, 1000]} min={0} max={1000} step={10} />
+                  <Slider
+                    defaultValue={[0, 1000]}
+                    min={0}
+                    max={1000}
+                    step={10}
+                    value={priceRange}
+                    onValueChange={(value) => setPriceRange(value as [number, number])}
+                  />
                   <div className="mt-2 flex items-center justify-between text-sm">
-                    <span>0 FCFA</span>
-                    <span>1000 FCFA</span>
+                    <span>{priceRange[0]} €</span>
+                    <span>{priceRange[1]} €</span>
                   </div>
                 </div>
               </div>
 
-              <Button className="w-full bg-accent-500 hover:bg-accent-500/90">
+              <Button
+                className="w-full bg-accent-500 hover:bg-accent-500/90"
+                onClick={() => {
+                  setCategory("all")
+                  setStyle("all")
+                  setArtist("all")
+                  setEthnie("all")
+                  setPriceRange([0, 1000])
+                  setSearchQuery("")
+                }}
+              >
                 <Filter className="mr-2 h-4 w-4" />
-                Appliquer les filtres
+                Réinitialiser les filtres
               </Button>
             </div>
           </div>
@@ -223,11 +242,11 @@ export default function GalleryPage() {
           <div className="mb-6 flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground">
-                Affichage de <strong>{artworks.length}</strong> œuvres
+                Affichage de <strong>{filteredArtworks.length}</strong> œuvres
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Select defaultValue="newest">
+              <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Trier par" />
                 </SelectTrigger>
@@ -241,7 +260,7 @@ export default function GalleryPage() {
             </div>
           </div>
 
-          <Tabs defaultValue="grid" className="mb-6">
+          <Tabs defaultValue="grid" value={viewMode} onValueChange={setViewMode} className="mb-6">
             <TabsList className="grid w-[200px] grid-cols-2 bg-muted hover:bg-muted">
               <TabsTrigger
                 value="grid"
@@ -258,7 +277,7 @@ export default function GalleryPage() {
             </TabsList>
             <TabsContent value="grid" className="mt-6">
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {artworks.map((artwork) => (
+                {filteredArtworks.map((artwork) => (
                   <Card key={artwork.id} className="overflow-hidden transition-all hover:shadow-md">
                     <div className="relative">
                       <Link href={`/artwork/${artwork.id}`}>
@@ -276,8 +295,11 @@ export default function GalleryPage() {
                         variant="ghost"
                         size="icon"
                         className="absolute right-2 top-2 rounded-full bg-background/80 backdrop-blur-sm"
+                        onClick={() => toggleFavorite(artwork.id)}
                       >
-                        <Heart className="h-5 w-5" />
+                        <Heart
+                          className={`h-5 w-5 ${favorites.includes(artwork.id) ? "fill-primary-500 text-primary-500" : ""}`}
+                        />
                         <span className="sr-only">Ajouter aux favoris</span>
                       </Button>
                       {artwork.isNew && <Badge className="absolute left-2 top-2 bg-secondary-500">Nouveau</Badge>}
@@ -286,14 +308,14 @@ export default function GalleryPage() {
                       <Link href={`/artwork/${artwork.id}`}>
                         <h3 className="font-playfair text-lg font-medium hover:text-primary-500">{artwork.title}</h3>
                       </Link>
-                      <Link href={`/artist/${artwork.artist.toLowerCase().replace(" ", "-")}`}>
+                      <Link href={`/artist/${artwork.artist.toLowerCase().replace(/\s+/g, "-")}`}>
                         <p className="text-sm text-muted-foreground hover:text-primary-500">{artwork.artist}</p>
                       </Link>
-                      <p className="mt-2 font-medium">{artwork.price} FCFA</p>
+                      <p className="mt-2 font-medium">{artwork.price} €</p>
                     </CardContent>
                     <CardFooter className="flex items-center justify-between p-4 pt-0">
                       <Badge variant="outline">{artwork.category}</Badge>
-                      <Button size="sm" variant="ghost" className="gap-2">
+                      <Button size="sm" variant="ghost" className="gap-2" onClick={() => addToCart(artwork)}>
                         <ShoppingCart className="h-4 w-4" />
                         Ajouter
                       </Button>
@@ -304,7 +326,7 @@ export default function GalleryPage() {
             </TabsContent>
             <TabsContent value="list" className="mt-6">
               <div className="space-y-4">
-                {artworks.map((artwork) => (
+                {filteredArtworks.map((artwork) => (
                   <Card key={artwork.id} className="overflow-hidden transition-all hover:shadow-md">
                     <div className="flex flex-col md:flex-row">
                       <div className="relative md:w-1/3">
@@ -323,8 +345,11 @@ export default function GalleryPage() {
                           variant="ghost"
                           size="icon"
                           className="absolute right-2 top-2 rounded-full bg-background/80 backdrop-blur-sm"
+                          onClick={() => toggleFavorite(artwork.id)}
                         >
-                          <Heart className="h-5 w-5" />
+                          <Heart
+                            className={`h-5 w-5 ${favorites.includes(artwork.id) ? "fill-primary-500 text-primary-500" : ""}`}
+                          />
                           <span className="sr-only">Ajouter aux favoris</span>
                         </Button>
                         {artwork.isNew && <Badge className="absolute left-2 top-2 bg-secondary-500">Nouveau</Badge>}
@@ -338,7 +363,7 @@ export default function GalleryPage() {
                                   {artwork.title}
                                 </h3>
                               </Link>
-                              <Link href={`/artist/${artwork.artist.toLowerCase().replace(" ", "-")}`}>
+                              <Link href={`/artist/${artwork.artist.toLowerCase().replace(/\s+/g, "-")}`}>
                                 <p className="text-sm text-muted-foreground hover:text-primary-500">{artwork.artist}</p>
                               </Link>
                               <div className="mt-2 flex items-center gap-2">
@@ -346,16 +371,10 @@ export default function GalleryPage() {
                                 <Badge variant="outline">{artwork.style}</Badge>
                               </div>
                               <p className="mt-4 text-sm text-muted-foreground">
-                                {artwork.category === "Sculpture"
-                                  ? "Sculpture traditionnelle gabonaise représentant la richesse du patrimoine culturel et spirituel du pays."
-                                  : artwork.category === "Paysage"
-                                    ? "Représentation vibrante des paysages naturels du Gabon, entre forêt équatoriale et côtes atlantiques."
-                                    : artwork.category === "Portrait"
-                                      ? "Portrait expressif capturant l'essence et la dignité des peuples gabonais."
-                                      : "Œuvre d'art gabonaise mêlant traditions ancestrales et expressions contemporaines."}
+                                {artwork.description ? artwork.description.substring(0, 150) + "..." : ""}
                               </p>
                             </div>
-                            <p className="text-xl font-medium">{artwork.price} FCFA</p>
+                            <p className="text-xl font-medium">{artwork.price} €</p>
                           </div>
                         </div>
                         <div className="mt-4 flex items-center justify-between">
@@ -364,7 +383,11 @@ export default function GalleryPage() {
                               Voir les détails
                             </Button>
                           </Link>
-                          <Button size="sm" className="gap-2 bg-primary-500 hover:bg-primary-500/90">
+                          <Button
+                            size="sm"
+                            className="gap-2 bg-primary-500 hover:bg-primary-500/90"
+                            onClick={() => addToCart(artwork)}
+                          >
                             <ShoppingCart className="h-4 w-4" />
                             Ajouter au panier
                           </Button>
@@ -377,25 +400,47 @@ export default function GalleryPage() {
             </TabsContent>
           </Tabs>
 
-          <div className="mt-8 flex justify-center">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" disabled>
-                &lt;
-              </Button>
-              <Button variant="default" size="icon" className="bg-primary-500 hover:bg-primary-500/90">
-                1
-              </Button>
-              <Button variant="outline" size="icon">
-                2
-              </Button>
-              <Button variant="outline" size="icon">
-                3
-              </Button>
-              <Button variant="outline" size="icon">
-                &gt;
+          {filteredArtworks.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <p className="text-lg font-medium">Aucune œuvre ne correspond à vos critères</p>
+              <p className="mt-2 text-muted-foreground">Essayez de modifier vos filtres pour voir plus de résultats</p>
+              <Button
+                onClick={() => {
+                  setCategory("all")
+                  setStyle("all")
+                  setArtist("all")
+                  setEthnie("all")
+                  setPriceRange([0, 1000])
+                  setSearchQuery("")
+                }}
+                className="mt-4 bg-primary-500 hover:bg-primary-500/90"
+              >
+                Réinitialiser les filtres
               </Button>
             </div>
-          </div>
+          )}
+
+          {filteredArtworks.length > 0 && (
+            <div className="mt-8 flex justify-center">
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" disabled>
+                  &lt;
+                </Button>
+                <Button variant="default" size="icon" className="bg-primary-500 hover:bg-primary-500/90">
+                  1
+                </Button>
+                <Button variant="outline" size="icon">
+                  2
+                </Button>
+                <Button variant="outline" size="icon">
+                  3
+                </Button>
+                <Button variant="outline" size="icon">
+                  &gt;
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

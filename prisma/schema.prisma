@@ -1,0 +1,192 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  CLIENT
+  ARTISTE
+  IMPRIMEUR
+  ADMIN
+}
+
+enum StatutCommande {
+  EN_ATTENTE
+  EN_COURS
+  EXPEDIEE
+  LIVREE
+  ANNULEE
+}
+
+model User {
+  id             String            @id @default(uuid())
+  email          String            @unique
+  password       String
+  role           Role              @default(CLIENT)
+  profile        Profile?
+  premiumStatus  PremiumStatus?
+  artistProfile  ArtistProfile?
+  printerProfile PrinterProfile?
+  notifications  Notification[]
+  commandes      Commande[]        @relation("ClientCommandes")
+  impressions    Commande[]        @relation("ImprimeurCommandes")
+  oeuvres        Oeuvre[]          @relation("AuteurOeuvres")
+  imageRequests  GenerationImageRequest[]
+  approuveesOeuvres Oeuvre[]       @relation("AdminApprouveOeuvres") // Œuvres approuvées par cet administrateur
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+model Profile {
+  id       String   @id @default(uuid())
+  user     User     @relation(fields: [userId], references: [id])
+  userId   String   @unique
+  pseudo   String
+  bio      String?
+  avatar   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PremiumStatus {
+  id             String   @id @default(uuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   @unique
+  subscribed     Boolean  @default(false)
+  grantedByAdmin Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model ArtistProfile {
+  id          String     @id @default(uuid())
+  user        User       @relation(fields: [userId], references: [id])
+  userId      String     @unique
+  createdAt   DateTime   @default(now())
+}
+
+model PrinterProfile {
+  id           String                  @id @default(uuid())
+  user         User                    @relation(fields: [userId], references: [id])
+  userId       String                  @unique
+  capabilities ImpressionCapability[]   @relation("PrinterCapabilities")
+  createdAt    DateTime                @default(now())
+}
+
+model ImpressionCapability {
+  id        String            @id @default(uuid())
+  name      String
+  printers  PrinterProfile[]  @relation("PrinterCapabilities")
+}
+
+model Categorie {
+  id       String   @id @default(uuid())
+  nom      String
+  oeuvres  Oeuvre[]
+}
+
+model Tag {
+  id       String   @id @default(uuid())
+  nom      String
+  oeuvres  Oeuvre[]  @relation("OeuvreTags")
+}
+
+model Oeuvre {
+  id                String                    @id @default(uuid())
+  titre             String
+  description       String?
+  auteur            User                      @relation("AuteurOeuvres", fields: [auteurId], references: [id])
+  auteurId          String
+  approuvee         Boolean                   @default(false)
+  categorie         Categorie                 @relation(fields: [categorieId], references: [id])
+  categorieId       String
+  tags              Tag[]                     @relation("OeuvreTags")
+  personnalisations OptionPersonnalisation[]
+  elementsCommande  ElementCommande[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  approbateurAdminId String? // Correction : Identifiant de l'administrateur ayant approuvé l'œuvre (type aligné avec `id` dans User)
+  approbateurAdmin   User?   @relation("AdminApprouveOeuvres", fields: [approbateurAdminId], references: [id]) // Relation avec l'administrateur ayant approuvé l'œuvre
+}
+
+model OptionPersonnalisation {
+  id        String   @id @default(uuid())
+  nom       String
+  details   String?
+  oeuvre    Oeuvre   @relation(fields: [oeuvreId], references: [id])
+  oeuvreId  String
+  createdAt DateTime @default(now())
+}
+
+model Commande {
+  id               String                   @id @default(uuid())
+  client           User                     @relation("ClientCommandes", fields: [clientId], references: [id])
+  clientId         String
+  imprimeur        User?                    @relation("ImprimeurCommandes", fields: [imprimeurId], references: [id])
+  imprimeurId      String?
+  elements         ElementCommande[]
+  statutHistorique StatutCommandeHistorique[]
+  paiement         Paiement?
+  livraison        DetailLivraison?
+  createdAt        DateTime                 @default(now())
+}
+
+model ElementCommande {
+  id         String    @id @default(uuid())
+  commande   Commande  @relation(fields: [commandeId], references: [id])
+  commandeId String
+  oeuvre     Oeuvre    @relation(fields: [oeuvreId], references: [id])
+  oeuvreId   String
+  quantite   Int
+}
+
+model StatutCommandeHistorique {
+  id         String       @id @default(uuid())
+  statut     StatutCommande
+  commande   Commande     @relation(fields: [commandeId], references: [id])
+  commandeId String
+  date       DateTime     @default(now())
+}
+
+model Paiement {
+  id         String    @id @default(uuid())
+  commande   Commande  @relation(fields: [commandeId], references: [id])
+  commandeId String    @unique
+  montant    Float
+  methode    String
+  date       DateTime  @default(now())
+}
+
+model DetailLivraison {
+  id         String    @id @default(uuid())
+  commande   Commande  @relation(fields: [commandeId], references: [id])
+  commandeId String    @unique
+  adresse    String
+  ville      String
+  codePostal String
+  pays       String
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  message   String
+  lu        Boolean   @default(false)
+  date      DateTime  @default(now())
+}
+
+model GenerationImageRequest {
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  prompt    String
+  resultat  String?
+  createdAt DateTime  @default(now())
+}

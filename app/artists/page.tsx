@@ -19,7 +19,7 @@ const artists = [
   {
     id: 1,
     name: "Jean-Paul Ndong",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/ART_AFRICAIN_CONTEMPORAIN.jpg",
     specialty: "Sculpture",
     region: "Libreville",
     bio: "Jean-Paul Ndong est un artiste gabonais reconnu pour ses sculptures et peintures qui mêlent traditions ancestrales et expressions contemporaines. Son travail s'inspire profondément des masques Fang et des rituels Bwiti.",
@@ -30,7 +30,7 @@ const artists = [
   {
     id: 2,
     name: "Marie Ogoula",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/bmi-2_bmwcm-2.0_fid-880229_fwcm-1.6_ihcm-61.0_iwcm-61.0_lmwcm-2.0_maxdim-1000_mc-ffffff_rmwcm-2.0_si-472379.jpg_tmwcm-2.0.jpg",
     specialty: "Peinture",
     region: "Port-Gentil",
     bio: "Marie Ogoula capture la beauté naturelle du Gabon à travers ses peintures vibrantes. Ses œuvres représentent souvent les paysages côtiers et la forêt équatoriale avec une palette de couleurs éclatantes.",
@@ -41,7 +41,7 @@ const artists = [
   {
     id: 3,
     name: "Pierre Akendengue",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/bmi-2_bmwcm-2.0_fid-880610_fwcm-1.9_ihcm-90.0_iwcm-62.5_lmwcm-2.0_maxdim-1000_mc-ffffff_rmwcm-2.0_si-473062.jpg_tmwcm-2.0.jpg",
     specialty: "Art mixte",
     region: "Franceville",
     bio: "Pierre Akendengue est un artiste polyvalent qui combine différentes techniques pour créer des œuvres uniques. Son art est fortement influencé par les cérémonies traditionnelles et la spiritualité gabonaise.",
@@ -52,7 +52,7 @@ const artists = [
   {
     id: 4,
     name: "Sophie Ntsame",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/si-435781.jpg_ihcm-50.00_iwcm-50.00_fls-880229L.tif_fts-880229T.tif_mc-ffffff_fwcm-1.60_tmwcm-5.00_bmwcm-5.00_lmwcm-5.00_rmwcm-5.00_maxdim-1000_en_easyart___iar-1 (1).jpg",
     specialty: "Portrait",
     region: "Oyem",
     bio: "Sophie Ntsame est spécialisée dans les portraits expressifs qui capturent l'essence et la dignité des peuples gabonais. Son style unique mêle réalisme et touches abstraites pour des œuvres saisissantes.",
@@ -63,7 +63,7 @@ const artists = [
   {
     id: 5,
     name: "Thomas Moussavou",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/c3fb5c21190fee657c58132e3cacdf17-473714.jpg",
     specialty: "Art abstrait",
     region: "Lambaréné",
     bio: "Thomas Moussavou explore l'art abstrait inspiré des symboles et motifs traditionnels Kota. Ses compositions géométriques colorées créent un pont entre l'héritage culturel gabonais et l'art contemporain.",
@@ -74,7 +74,7 @@ const artists = [
   {
     id: 6,
     name: "Claire Ayouma",
-    image: "/placeholder.svg?height=400&width=400",
+    image: "/nature.jpg",
     specialty: "Sculpture",
     region: "Mouila",
     bio: "Claire Ayouma est connue pour ses sculptures délicates qui représentent souvent des figures féminines et des masques Punu. Son travail célèbre la beauté et la force des femmes gabonaises.",

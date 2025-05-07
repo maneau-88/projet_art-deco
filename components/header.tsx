@@ -1,142 +1,271 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/mode-toggle"
-import { UserCircle, ShoppingCart, Menu } from "lucide-react"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useState } from "react"
-import { useMediaQuery } from "@/hooks/use-media-query"
+import { UserCircle, ShoppingCart, LogOut } from "lucide-react"
+import { MainNav } from "@/components/main-nav"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
+import { signOut } from "@/app/actions/auth"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Header() {
-  const [isOpen, setIsOpen] = useState(false)
-  const isDesktop = useMediaQuery("(min-width: 768px)")
+  const [scrolled, setScrolled] = useState(false)
+  const [prevScrollPos, setPrevScrollPos] = useState(0)
+  const [visible, setVisible] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClientComponentClient()
+  const { toast } = useToast()
 
-  const navigation = [
-    { name: "Accueil", href: "/" },
-    { name: "Galerie", href: "/gallery" },
-    { name: "Artistes", href: "/artists" },
-    { name: "Comment ça marche", href: "/how-it-works" },
-    { name: "Contact", href: "/contact" },
-  ]
+  // Gérer le défilement
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollPos = window.scrollY
+
+      // Determine if scrolled past threshold
+      if (currentScrollPos > 20) {
+        setScrolled(true)
+      } else {
+        setScrolled(false)
+      }
+
+      // Determine if should be visible based on scroll direction
+      const isScrollingUp = prevScrollPos > currentScrollPos
+
+      setVisible(isScrollingUp || currentScrollPos < 10)
+      setPrevScrollPos(currentScrollPos)
+    }
+
+    window.addEventListener("scroll", handleScroll)
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [prevScrollPos])
+
+  // Charger les données de l'utilisateur
+  useEffect(() => {
+    async function loadUserData() {
+      try {
+        setLoading(true)
+
+        // Récupérer la session
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          setUser(null)
+          setProfile(null)
+          return
+        }
+
+        setUser(session.user)
+
+        // Récupérer le profil
+        const { data: profileData } = await supabase.from("profiles").select("*").eq("id", session.user.id).single()
+
+        if (profileData) {
+          setProfile(profileData)
+        }
+      } catch (error) {
+        console.error("Erreur:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadUserData()
+
+    // Écouter les changements d'authentification
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      loadUserData()
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  // Gérer la déconnexion
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      router.push("/")
+      toast({
+        title: "Déconnexion réussie",
+        description: "Vous avez été déconnecté avec succès",
+      })
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la déconnexion",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Extraire les initiales pour l'avatar
+  const getInitials = () => {
+    if (!profile) return "AD"
+    const firstName = profile.first_name || ""
+    const lastName = profile.last_name || ""
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
+  }
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-6 md:gap-10">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="Art & Deco" width={120} height={60} priority />
-          </Link>
+    <AnimatePresence>
+      <motion.header
+        className={cn(
+          "fixed top-0 z-50 w-full transition-all duration-300",
+          scrolled
+            ? "border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+            : "bg-transparent",
+        )}
+        initial={{ y: 0, opacity: 1 }}
+        animate={{
+          y: visible ? 0 : -100,
+          opacity: visible ? 1 : 0,
+        }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="container flex h-16 items-center">
+          <div className="flex items-center w-1/5">
+            <Link href="/" className="flex items-center space-x-2">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Image src="/logo.png" alt="Art & Deco" width={140} height={70} priority />
+              </motion.div>
+            </Link>
+          </div>
 
-          {isDesktop ? (
-            <nav className="flex gap-6 ml-20">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="text-sm font-medium transition-colors hover:text-primary"
-            
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-          ) : null}
-        </div>
+          <div className="flex justify-start w-3/5">
+            <MainNav />
+          </div>
 
-        <div className="flex items-center gap-2">
-          {isDesktop ? (
-            <>
-              <Link href="/cart">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-accent-500 hover:text-accent-500/80 hover:bg-accent-500/10"
-                >
+          <div className="flex items-center justify-end w-1/5 gap-2">
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                asChild
+                className="relative text-accent-500 hover:text-accent-500/80 hover:bg-accent-500/10"
+              >
+                <Link href="/cart">
                   <ShoppingCart className="h-5 w-5" />
                   <span className="sr-only">Panier</span>
-                </Button>
-              </Link>
-              <Link href="/account">
+                </Link>
+              </Button>
+
+              {!loading && user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage
+                          src={profile?.avatar_url || "/placeholder.svg?height=32&width=32"}
+                          alt="Photo de profil"
+                        />
+                        <AvatarFallback>{getInitials()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/account">Profil</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account?tab=orders">Commandes</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account?tab=favorites">Favoris</Link>
+                    </DropdownMenuItem>
+                    {profile?.user_type === "admin" && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin/dashboard">Administration</Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Déconnexion
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
                 <Button
                   variant="ghost"
                   size="icon"
+                  asChild
                   className="text-accent-500 hover:text-accent-500/80 hover:bg-accent-500/10"
                 >
-                  <UserCircle className="h-5 w-5" />
-                  <span className="sr-only">Compte</span>
+                  <Link href="/account">
+                    <UserCircle className="h-5 w-5" />
+                    <span className="sr-only">Compte</span>
+                  </Link>
                 </Button>
-              </Link>
+              )}
+
               <ModeToggle />
-              <Link href="/login">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-primary-500 text-primary-500 hover:bg-primary-500/10"
-                >
-                  Connexion
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button size="sm" className="bg-primary-500 hover:bg-primary-500/90">
-                  Inscription
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <ModeToggle />
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right">
-                  <nav className="grid gap-6 text-lg font-medium">
-                    {navigation.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className="hover:text-primary"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
-                    <Link
-                      href="/cart"
-                      className="flex items-center gap-2 hover:text-primary"
-                      onClick={() => setIsOpen(false)}
+            </motion.div>
+
+            <motion.div
+              className="flex items-center gap-2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              {!loading && !user ? (
+                <>
+                  <Link href="/login">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-primary-500 text-primary-500 hover:bg-primary-500/10"
                     >
-                      <ShoppingCart className="h-5 w-5" />
-                      Panier
-                    </Link>
-                    <Link
-                      href="/account"
-                      className="flex items-center gap-2 hover:text-primary"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <UserCircle className="h-5 w-5" />
-                      Compte
-                    </Link>
-                    <Link href="/login" onClick={() => setIsOpen(false)}>
-                      <Button variant="outline" className="w-full">
-                        Connexion
-                      </Button>
-                    </Link>
-                    <Link href="/register" onClick={() => setIsOpen(false)}>
-                      <Button className="w-full">Inscription</Button>
-                    </Link>
-                  </nav>
-                </SheetContent>
-              </Sheet>
-            </>
-          )}
+                      Connexion
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button size="sm" className="bg-primary-500 hover:bg-primary-500/90">
+                      Inscription
+                    </Button>
+                  </Link>
+                </>
+              ) : null}
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </header>
+      </motion.header>
+      {/* Spacer to prevent content from hiding under fixed header */}
+      <div className="h-16" />
+    </AnimatePresence>
   )
 }

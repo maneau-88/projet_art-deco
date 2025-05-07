@@ -36,7 +36,7 @@ export default function LoginPage() {
     if (error) {
       setErrorMessage(error.message);
     } else {
-      window.location.href = "/dashboard"; // Redirection après connexion réussie
+      window.location.href = "/account"; // Redirection après connexion réussie
     }
     setLoading(false);
   };

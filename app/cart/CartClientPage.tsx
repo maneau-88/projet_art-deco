@@ -15,9 +15,9 @@ const cartItems = [
     id: 1,
     title: "Paysage équatoriale",
     artist: "Jean Kouassi",
-    price: 450,
+    price: 450000,
     quantity: 1,
-    image: "/images/paysage-equatoriale.jpg",
+    image: "/si-435781.jpg_ihcm-50.00_iwcm-50.00_fls-880229L.tif_fts-880229T.tif_mc-ffffff_fwcm-1.60_tmwcm-5.00_bmwcm-5.00_lmwcm-5.00_rmwcm-5.00_maxdim-1000_en_easyart___iar-1 (1).jpg",
     options: {
       size: "60x80cm",
       frame: "Cadre noir mat",
@@ -27,9 +27,9 @@ const cartItems = [
     id: 2,
     title: "Masque traditionnel",
     artist: "Marie Ndong",
-    price: 320,
+    price: 320000,
     quantity: 1,
-    image: "/placeholder.svg?height=300&width=300",
+    image: "/si-5485.jpg_ihcm-20.90_iwcm-26.17_fls-880229L.tif_fts-880229T.tif_mc-ffffff_fwcm-1.60_tmwcm-3.55_bmwcm-3.55_lmwcm-4.67_rmwcm-4.67_maxdim-1000_en_easyart___iar-1.jpg",
     options: {
       size: "Original",
       frame: "Sans cadre",
@@ -85,7 +85,7 @@ export default function CartClientPage() {
                                 </div>
                               </div>
                               <div className="text-right">
-                                <p className="font-medium">{item.price} €</p>
+                                <p className="font-medium">{item.price}FCFA</p>
                                 <div className="flex items-center mt-2 space-x-2">
                                   <Button variant="outline" size="icon" className="h-8 w-8">
                                     <span className="sr-only">Diminuer la quantité</span>
@@ -134,16 +134,16 @@ export default function CartClientPage() {
                   <div className="space-y-4">
                     <div className="flex justify-between">
                       <span>Sous-total</span>
-                      <span>{subtotal} €</span>
+                      <span>{subtotal}FCFA</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Frais de livraison</span>
-                      <span>{shipping} €</span>
+                      <span>{shipping}FCFA</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
-                      <span>{total} €</span>
+                      <span>{total}FCFA</span>
                     </div>
 
                     <div className="pt-4">

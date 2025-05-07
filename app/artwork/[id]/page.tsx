@@ -1,41 +1,99 @@
-import type { Metadata } from "next"
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { Heart, ShoppingCart, Share2, ArrowLeft, Check } from "lucide-react"
 import ArtworkCustomization from "@/components/artwork-customization"
-import RelatedArtworks from "@/components/related-artworks"
+import RelatedArtworks from "@/components/related-artworks2"
 import WallPreview from "@/components/wall-preview"
+import { getArtworkById } from "@/lib/data"
+import { useToast } from "@/hooks/use-toast"
 
-export const metadata: Metadata = {
-  title: "Détail de l'œuvre | Art & Deco",
-  description: "Découvrez et personnalisez cette œuvre d'art gabonaise pour votre décoration intérieure",
-}
+export default function ArtworkDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const { toast } = useToast()
+  const [artwork, setArtwork] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isFavorite, setIsFavorite] = useState(false)
 
-// Sample artwork data with Gabonese art
-const artwork = {
-  id: 1,
-  title: "Masque Fang Ngil",
-  artist: "Jean-Paul Ndong",
-  price: 450,
-  image: "/placeholder.svg?height=600&width=500",
-  category: "Sculpture",
-  style: "Traditionnel",
-  description:
-    "Ce masque Fang Ngil est une réinterprétation contemporaine des masques traditionnels utilisés dans les cérémonies du peuple Fang au Gabon. Avec ses traits distinctifs et sa finition soignée, cette œuvre apportera une touche d'authenticité africaine à votre intérieur tout en créant un point focal captivant.",
-  dimensions: "40 x 20 x 15 cm",
-  medium: "Bois d'ébène sculpté à la main",
-  year: 2023,
-  ethnie: "Fang",
-  region: "Nord du Gabon",
-  isNew: true,
-  isAvailable: true,
-}
+  useEffect(() => {
+    if (params.id) {
+      const id = Number.parseInt(params.id as string)
+      const foundArtwork = getArtworkById(id)
 
-export default function ArtworkDetailPage({ params }: { params: { id: string } }) {
+      if (foundArtwork) {
+        setArtwork(foundArtwork)
+      } else {
+        router.push("/gallery")
+        toast({
+          title: "Œuvre non trouvée",
+          description: "L'œuvre que vous recherchez n'existe pas",
+          variant: "destructive",
+        })
+      }
+    }
+    setIsLoading(false)
+  }, [params.id, router, toast])
+
+  const toggleFavorite = () => {
+    setIsFavorite(!isFavorite)
+    toast({
+      title: isFavorite ? "Retiré des favoris" : "Ajouté aux favoris",
+      description: isFavorite ? "L'œuvre a été retirée de vos favoris" : "L'œuvre a été ajoutée à vos favoris",
+    })
+  }
+
+  const addToCart = () => {
+    toast({
+      title: "Ajouté au panier",
+      description: `${artwork.title} a été ajouté à votre panier`,
+    })
+  }
+
+  const shareArtwork = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: artwork.title,
+          text: `Découvrez ${artwork.title} par ${artwork.artist} sur Art & Deco`,
+          url: window.location.href,
+        })
+        .catch((err) => {
+          toast({
+            title: "Partage",
+            description: "L'œuvre a été copiée dans le presse-papier",
+          })
+        })
+    } else {
+      navigator.clipboard.writeText(window.location.href)
+      toast({
+        title: "Lien copié",
+        description: "Le lien de l'œuvre a été copié dans le presse-papier",
+      })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container py-8 md:py-12">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-pulse text-lg">Chargement de l'œuvre...</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!artwork) {
+    return null
+  }
+
   return (
     <div className="container py-8 md:py-12">
       <Link href="/gallery" className="mb-6 inline-flex items-center text-sm hover:text-primary-500">
@@ -61,8 +119,9 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
             variant="ghost"
             size="icon"
             className="absolute right-4 top-4 rounded-full bg-background/80 backdrop-blur-sm text-primary-500"
+            onClick={toggleFavorite}
           >
-            <Heart className="h-5 w-5" />
+            <Heart className={`h-5 w-5 ${isFavorite ? "fill-primary-500" : ""}`} />
             <span className="sr-only">Ajouter aux favoris</span>
           </Button>
           {artwork.isNew && (
@@ -76,7 +135,7 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="font-playfair text-3xl font-bold md:text-4xl">{artwork.title}</h1>
-                <Link href={`/artist/${artwork.artist.toLowerCase().replace(" ", "-")}`}>
+                <Link href={`/artist/${artwork.artist.toLowerCase().replace(/\s+/g, "-")}`}>
                   <p className="mt-1 text-lg text-muted-foreground hover:text-primary-500">{artwork.artist}</p>
                 </Link>
               </div>
@@ -86,7 +145,7 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
             <div className="mt-4 flex flex-wrap gap-2">
               <Badge variant="outline">{artwork.category}</Badge>
               <Badge variant="outline">{artwork.style}</Badge>
-              <Badge variant="outline">Ethnie {artwork.ethnie}</Badge>
+              {artwork.ethnie && <Badge variant="outline">Ethnie {artwork.ethnie}</Badge>}
               {artwork.isAvailable ? (
                 <Badge
                   variant="outline"
@@ -110,22 +169,30 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium">Dimensions</h3>
-                  <p className="text-muted-foreground">{artwork.dimensions}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">Matériau</h3>
-                  <p className="text-muted-foreground">{artwork.medium}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">Année</h3>
-                  <p className="text-muted-foreground">{artwork.year}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium">Région</h3>
-                  <p className="text-muted-foreground">{artwork.region}</p>
-                </div>
+                {artwork.dimensions && (
+                  <div>
+                    <h3 className="text-sm font-medium">Dimensions</h3>
+                    <p className="text-muted-foreground">{artwork.dimensions}</p>
+                  </div>
+                )}
+                {artwork.medium && (
+                  <div>
+                    <h3 className="text-sm font-medium">Matériau</h3>
+                    <p className="text-muted-foreground">{artwork.medium}</p>
+                  </div>
+                )}
+                {artwork.year && (
+                  <div>
+                    <h3 className="text-sm font-medium">Année</h3>
+                    <p className="text-muted-foreground">{artwork.year}</p>
+                  </div>
+                )}
+                {artwork.region && (
+                  <div>
+                    <h3 className="text-sm font-medium">Région</h3>
+                    <p className="text-muted-foreground">{artwork.region}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -160,7 +227,7 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
             </Tabs>
 
             <div className="mt-8 flex flex-col gap-4">
-              <Button size="lg" className="gap-2 bg-primary-500 hover:bg-primary-500/90">
+              <Button size="lg" className="gap-2 bg-primary-500 hover:bg-primary-500/90" onClick={addToCart}>
                 <ShoppingCart className="h-5 w-5" />
                 Ajouter au panier
               </Button>
@@ -169,14 +236,16 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
                   variant="outline"
                   size="lg"
                   className="flex-1 gap-2 border-secondary-500 text-secondary-500 hover:bg-secondary-500/10"
+                  onClick={toggleFavorite}
                 >
-                  <Heart className="h-5 w-5" />
+                  <Heart className={`h-5 w-5 ${isFavorite ? "fill-secondary-500" : ""}`} />
                   Favoris
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
                   className="flex-1 gap-2 border-accent-500 text-accent-500 hover:bg-accent-500/10"
+                  onClick={shareArtwork}
                 >
                   <Share2 className="h-5 w-5" />
                   Partager
@@ -189,7 +258,7 @@ export default function ArtworkDetailPage({ params }: { params: { id: string } }
 
       <Separator className="my-12" />
 
-      <RelatedArtworks />
+      <RelatedArtworks categoryId={artwork.category} currentArtworkId={artwork.id} />
     </div>
   )
 }
